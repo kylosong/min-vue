@@ -5,13 +5,13 @@
 class ReactiveEffect {
   private _fn;
 
-  constructor(fn) {
+  constructor(fn, public scheduler?) {
     this._fn = fn;
   }
 
   run() {
     activeEffect = this;
-    this._fn();
+    return this._fn();
   }
 
 }
@@ -34,16 +34,32 @@ export function track(target, key) {
   }
 
   dep.add(activeEffect);
-  // const dep = new Set();
 
+}
+
+// 基于 target，key，查找到之前收集到的 fn 进行遍历
+export function trigger(target, key) {
+  let depsMap = targetMap.get(target);
+  let dep = depsMap.get(key);
+  for (const effect of dep) {
+    if (effect.scheduler) {
+      effect.scheduler();
+    } else {
+      effect.run();
+    }
+  }
 }
 
 
 let activeEffect;
-export function effect(fn) {
+export function effect(fn, options: any = {}) {
 
-  const _effect = new ReactiveEffect(fn);
+  const scheduler = options.scheduler;
+
+  const _effect = new ReactiveEffect(fn, scheduler);
 
   _effect.run();
+
+  return _effect.run.bind(_effect);
 
 }
